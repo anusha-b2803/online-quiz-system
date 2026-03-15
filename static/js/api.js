@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000/api";
+const API_URL = "/api";
 
 function setToken(token, role, userId) {
     localStorage.setItem("quiz_token", token);
