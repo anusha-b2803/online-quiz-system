@@ -74,7 +74,7 @@
 
         async function loadStudents() {
             try {
-                const students = await apiFetch("/students");
+                const students = await apiFetch("/auth/students");
                 const cbDiv = document.getElementById("studentCheckboxes");
                 cbDiv.innerHTML = students.map(s => `
                     <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
