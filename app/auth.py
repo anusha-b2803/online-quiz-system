@@ -4,7 +4,6 @@ from jose import JWTError, jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import os
-import oracledb
 
 from app.schemas import TokenData, UserCreate, UserLogin, Token
 from app.database import execute_query, get_db_cursor
