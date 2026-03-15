@@ -1,8 +1,8 @@
 # Online Quiz System with Performance Analytics
 
-A production-style REST API based quiz platform built with **FastAPI** and **Oracle Database**.
+A production-style REST API based quiz platform built with **FastAPI** and **PostgreSQL**.
 
-## 🚀 Features
+## Features
 - **User Authentication**: Secure Registration & Login (JWT + Hashing) for Students & Teachers.
 - **Quiz Management**: Teachers can create quizzes with multiple options and difficulty levels.
 - **Quiz Attempt**: Students can take quizzes with real-time timers.
@@ -11,28 +11,23 @@ A production-style REST API based quiz platform built with **FastAPI** and **Ora
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 - **Backend**: FastAPI (Python)
-- **Database**: Oracle SQL via `python-oracledb`
+- **Database**: PostgreSQL via `psycopg2-binary`
 - **Frontend**: HTML5, CSS3 (Glassmorphism), Vanilla JavaScript (Fetch API)
+- **Deployment**: Render (Web Service & Managed PostgreSQL)
 
 ---
 
-## 🏃‍♂️ Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 - **Python 3.8+**
-- **Oracle Database** (Local XE or Cloud)
-- Oracle Account with access to execute DDLs.
+- **PostgreSQL Database** (Local or Managed Cloud like Render)
 
 ### 2. Database Setup
-Execute the contents of `database/schema.sql` in your Oracle Database tool (SQL*Plus, SQL Developer, or Oracle Cloud Console).
-This will create the following tables:
-- `USERS`
-- `QUIZZES`
-- `QUESTIONS`
-- `ATTEMPTS`
-- `ANSWERS`
+The application includes a setup script that will automatically initialize your database schema.
+You will need an empty PostgreSQL database ready to connect to.
 
 ### 3. Installation
 Clone or navigate to the project directory and install dependencies:
@@ -41,41 +36,54 @@ pip install -r requirements.txt
 ```
 
 ### 4. Configuration
-Set environment variables for your Oracle Database credentials:
+Set the environment variable for your PostgreSQL Database connection string:
 
 **Windows (PowerShell):**
 ```powershell
-$env:ORACLE_USER="your_username"
-$env:ORACLE_PASSWORD="your_password"
-$env:ORACLE_DSN="localhost/XEPDB1"
+$env:DATABASE_URL="postgresql://username:password@localhost/quizdb"
 ```
 
 **Linux/Mac:**
 ```bash
-export ORACLE_USER="your_username"
-export export ORACLE_PASSWORD="your_password"
-export ORACLE_DSN="localhost/XEPDB1"
+export DATABASE_URL="postgresql://username:password@localhost/quizdb"
 ```
 
-### 5. Run the Server
+### 5. Initialize the Schema
+Run the database setup script to create the necessary tables:
+```bash
+python setup_db.py
+```
+
+### 6. Run the Server
 Start the FastAPI server using Uvicorn:
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 6. Access the Application
-- **Web App**: Open [http://localhost:8000](http://localhost:8000) in your browser.
-- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)
+### 7. Access the Application
+- **Web App**: Open http://localhost:8000 in your browser.
+- **API Documentation**: http://localhost:8000/docs (Swagger UI)
 
 ---
 
-## 📁 Project Structure
+## Deployment (Render)
+
+This project is configured for easy deployment on Render via the included `render.yaml` blueprint.
+
+1. Push your repository to GitHub.
+2. Go to the Render Dashboard and create a new **PostgreSQL** database.
+3. Click "New" > "Blueprint" and connect your GitHub repository.
+4. Render will automatically read the `render.yaml` file, detect the PostgreSQL database, inject the `DATABASE_URL` environment variable, and build your FastAPI web service.
+
+---
+
+## Project Structure
 ```text
 online-quiz-system/
 │
 ├── app/
 │   ├── main.py              # App entry point & Router setup
-│   ├── database.py          # Oracle connection pool
+│   ├── database.py          # PostgreSQL connection pool
 │   ├── auth.py              # JWT & Auth Endpoints
 │   ├── schemas.py           # Pydantic validation models
 │   ├── quiz_routes.py       # Quiz & Attempt management
@@ -83,7 +91,7 @@ online-quiz-system/
 │   └── utils.py             # Hashing helpers
 │
 ├── database/
-│   └── schema.sql           # Oracle DDL
+│   └── schema.sql           # PostgreSQL DDL
 │
 ├── frontend/                # HTML Templates
 │   ├── index.html
@@ -95,5 +103,7 @@ online-quiz-system/
 │   ├── css/style.css        # Premium Styling
 │   └── js/api.js            # Fetch API Handler
 │
+├── render.yaml              # Render deployment configuration
+├── setup_db.py              # Schema initialization script
 └── requirements.txt         # Dependencies
 ```
