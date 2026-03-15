@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Quizora</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/api.js"></script>
+    <style>
+        .nav-links a {
+            cursor: pointer;
+            padding: 0.5rem 0.25rem;
+            transition: all 0.2s;
+        }
+        .nav-links a.active-tab {
+            color: var(--primary) !important;
+            border-bottom: 2px solid var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">Quizora<span>.</span></div>
+        <div class="nav-links" id="dynLinks" style="display: flex; align-items: center; gap: 0.75rem;">
+            <!-- Tabs load dynamically here -->
+        </div>
+    </nav>
+
+    <div class="glass-container" style="max-width: 900px; margin: 3rem auto; width: 90%; padding: 2.5rem; position: relative; overflow:hidden;">
+        <div class="gform-header"></div>
+        
+        <!-- STUDENT DASHBOARD -->
+        <div id="studentView" style="display: none;">
+            <!-- Profile/Stats Section -->
+            <div id="tab-stats" class="tab-content">
+                <h2>My Stats</h2>
+                <div class="stat-grid" id="studentStats"></div>
+            </div>
+            
+            <!-- Quizzes Section -->
+            <div id="tab-quizzes" class="tab-content" style="display: none;">
+                <h2>Available Quizzes</h2>
+                <div id="quizList" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+
+            <!-- History Section -->
+            <div id="tab-history" class="tab-content" style="display: none;">
+                <h2>My Attempt History</h2>
+                <div class="glass-card" style="padding: 1rem; background: rgba(30,31,59,0.25); margin-top: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted); font-size: 0.85rem;">
+                                <th style="padding: 0.75rem;">Quiz</th>
+                                <th>Score</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEACHER DASHBOARD -->
+        <div id="teacherView" style="display: none;">
+            <div id="tab-manage" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2>Quizzes Created</h2>
+                    <button onclick="window.location.href='create_quiz.html'" style="width: auto; padding: 0.5rem 1rem;">+ Create Quiz</button>
+                </div>
+                <div id="teacherQuizList" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+
+            <!-- Analytics Tab Dashboard -->
+            <div id="tab-analytics" class="tab-content" style="display: none;">
+                <h2>Quiz Analytics</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Select a quiz below to view detailed breakdown stats and leaderboard responses inline.</p>
+                
+                <div id="analyticsQuizList" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Filter lists render here -->
+                </div>
+
+                <!-- Detailed statistics wrapper (Initially hidden) -->
+                <div id="detailedStats" class="glass-card" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(30,31,59,0.25);">
+                    <button onclick="backToQuizList()" class="secondary" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-bottom: 1rem;">&larr; Back to List</button>
+                    <h3 id="analyticsTitle" style="color: var(--primary);">Quiz Title</h3>
+                    
+                    <div class="stat-grid" id="analyticsSummary" style="margin-top: 1.25rem;"></div>
+
+                    <h4 style="margin-top: 1.5rem; color: white;">Leaderboard</h4>
+                    <div class="glass-card" style="background: rgba(15,23,42,0.4); padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem; overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.8rem;">
+                                    <th style="padding: 0.6rem;">Student Name</th>
+                                    <th>Score</th>
+                                    <th>Time Taken</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analyticsLeaderboard" style="font-size: 0.85rem; color: white;"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Profile Modal Overlay -->
+    <div id="studentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+        <div class="glass-container" style="max-width: 500px; width: 90%; padding: 2rem; position: relative; max-height: 80vh; overflow-y: auto;">
+            <span onclick="closeModal()" style="position: absolute; top: 1rem; right: 1.25rem; cursor: pointer; font-size: 1.5rem; color: var(--text-muted); transition: color 0.2s;">&times;</span>
+            
+            <h3 id="modalTitle" style="margin-bottom: 1rem; font-size: 1.35rem;">Student Profile</h3>
+            
+            <div class="stat-grid" id="modalStats" style="margin-bottom: 1.5rem;"></div>
+
+            <h4>Past Quiz Activity</h4>
+            <div style="max-height: 250px; overflow-y: auto; background: rgba(30, 41, 59, 0.4); border-radius: 8px; border: 1px solid var(--glass-border); margin-top: 0.5rem;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.8rem;">
+                            <th style="padding: 0.6rem;">Quiz</th>
+                            <th>Score</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalHistoryBody" style="font-size: 0.85rem; color: white;"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            // Hide all
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active-tab'));
+            
+            // Show selected
+            const content = document.getElementById(`tab-${tabId}`);
+            const btn = document.getElementById(`tab-btn-${tabId}`);
+            if (content) content.style.display = 'block';
+            if (btn) btn.classList.add('active-tab');
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const role = getRole();
+            const links = document.getElementById("dynLinks");
+
+            if (role === "STUDENT") {
+                links.innerHTML = `
+                    <a href="#" onclick="switchTab('stats')" id="tab-btn-stats" class="active-tab">My Stats</a>
+                    <a href="#" onclick="switchTab('quizzes')" id="tab-btn-quizzes">Available Quizzes</a>
+                    <a href="#" onclick="switchTab('history')" id="tab-btn-history">History</a>
+                    <button onclick="logout()" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 20px;" class="secondary">Logout</button>
+                `;
+                document.getElementById("studentView").style.display = "block";
+                loadStudentDashboard();
+            } else if (role === "TEACHER") {
+                links.innerHTML = `
+                    <a href="#" onclick="switchTab('manage')" id="tab-btn-manage" class="active-tab">Manage Quizzes</a>
+                    <a href="#" onclick="switchTab('analytics')" id="tab-btn-analytics">Analytics</a>
+                    <button onclick="logout()" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 20px;" class="secondary">Logout</button>
+                `;
+                document.getElementById("teacherView").style.display = "block";
+                loadTeacherDashboard();
+            }
+        });
+
+        async function loadStudentDashboard() {
+            try {
+                // ...existing logic...
+                const stats = await apiFetch("/analytics/student_stats");
+                document.getElementById("studentStats").innerHTML = `
+                    <div class="stat-item"><div class="stat-value">${stats.quizzes_taken}</div><div style="font-size:0.8rem;">Taken</div></div>
+                    <div class="stat-item"><div class="stat-value">${stats.avg_score.toFixed(1)}</div><div style="font-size:0.8rem;">Avg</div></div>
+                    <div class="stat-item"><div class="stat-value">${stats.total_score}</div><div style="font-size:0.8rem;">Total</div></div>
+                `;
+
+                const quizzes = await apiFetch("/quizzes/");
+                const listDiv = document.getElementById("quizList");
+                listDiv.innerHTML = quizzes.map(q => {
+                    const maxSet = q.max_attempts > 0;
+                    const maxedOut = maxSet && (q.attempted_count >= q.max_attempts);
+                    
+                    return `
+                    <div class="glass-card" style="display: flex; justify-content: space-between; align-items: center; ${maxedOut ? 'opacity: 0.6;' : ''}">
+                        <div>
+                            <h3 style="margin-bottom:0.25rem;">${q.title}</h3>
+                            <p style="font-size:0.85rem; margin-bottom:0.5rem;">${q.description || "No description"}</p>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom:0.5rem;">By: ${q.created_by_name || "Unknown"}</div>
+                            <span class="badge medium">${q.time_limit} mins</span>
+                            <span class="badge ${maxedOut ? 'hard' : 'easy'}">${maxSet ? `Attempt ${q.attempted_count}/${q.max_attempts}` : 'Unlimited attempts'}</span>
+                        </div>
+                        ${maxedOut 
+                            ? `<button disabled style="width: auto; background: var(--glass-border); color: var(--text-muted); cursor: not-allowed;">Maxed Out</button>`
+                            : `<button onclick="startQuiz(${q.quiz_id})" style="width: auto;">Attempt</button>`
+                        }
+                    </div>
+                `}).join("");
+
+
+                const history = await apiFetch("/analytics/my_attempts");
+                const histBody = document.getElementById("historyBody");
+                histBody.innerHTML = history.map(h => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.75rem; color: white; font-weight:600;">${h.quiz_title}</td>
+                        <td>${h.score}</td>
+                        <td style="font-size:0.8rem; color:var(--text-muted);">${new Date(h.date).toLocaleDateString()}</td>
+                    </tr>
+                `).join("");
+            } catch (err) { alert(err.message); }
+        }
+
+        async function loadTeacherDashboard() {
+            try {
+                const quizzes = await apiFetch("/quizzes/");
+                
+                // 1. Populate Manage Quizzes Tab
+                const listDiv = document.getElementById("teacherQuizList");
+                listDiv.innerHTML = quizzes.map(q => `
+                    <div class="glass-card" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>${q.title}</h3>
+                            <p>${q.description || "No description"}</p>
+                            <span class="badge medium">${q.time_limit} mins</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="viewQuiz(${q.quiz_id})" style="width: auto;">View</button>
+                        </div>
+                    </div>
+                `).join("");
+
+                // 2. Populate Analytics Quiz List Tab
+                const analyticsDiv = document.getElementById("analyticsQuizList");
+                analyticsDiv.innerHTML = quizzes.map(q => `
+                    <div class="glass-card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s;" onclick="showQuizAnalytics(${q.quiz_id}, '${q.title}')">
+                        <div>
+                            <h3>${q.title}</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted);">${q.description || "No description"}</p>
+                        </div>
+                        <div style="color: var(--primary); font-weight: 600;">View Stats &rarr;</div>
+                    </div>
+                `).join("");
+
+            } catch (err) { alert(err.message); }
+        }
+
+        async function showQuizAnalytics(id, title) {
+            try {
+                document.getElementById("analyticsQuizList").style.display = "none";
+                document.getElementById("detailedStats").style.display = "block";
+                document.getElementById("analyticsTitle").innerText = title;
+                
+                const summary = await apiFetch(`/analytics/summary/${id}`);
+                document.getElementById("analyticsSummary").innerHTML = `
+                    <div class="stat-item"><div class="stat-value">${summary.total_attempts}</div><div>Attempts</div></div>
+                    <div class="stat-item"><div class="stat-value">${summary.avg_score.toFixed(1)}</div><div>Avg Score</div></div>
+                    <div class="stat-item"><div class="stat-value">${summary.max_score}</div><div>High Score</div></div>
+                `;
+                
+                const lb = await apiFetch(`/analytics/leaderboard/${id}`);
+                document.getElementById("analyticsLeaderboard").innerHTML = lb.map(s => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.6rem;">
+                            <a href="#" onclick="viewStudentProfile(${s.student_id}, '${s.name}')" style="color:var(--primary); text-decoration:none; font-weight:600;">${s.name}</a>
+                        </td>
+                        <td>${s.score}</td>
+                        <td>${s.time_taken}s</td>
+                    </tr>
+                `).join("");
+            } catch (err) { alert(err.message); }
+        }
+
+        function backToQuizList() {
+            document.getElementById("analyticsQuizList").style.display = "flex";
+            document.getElementById("detailedStats").style.display = "none";
+        }
+
+        function startQuiz(id) { window.location.href = `quiz.html?id=${id}`; }
+        function viewQuiz(id) { window.location.href = `quiz.html?id=${id}&view=true`; }
+
+        async function viewStudentProfile(id, name) {
+            try {
+                const profile = await apiFetch(`/analytics/student_profile/${id}`);
+                const modal = document.getElementById("studentModal");
+                document.getElementById("modalTitle").innerText = `${name}'s Profile`;
+                
+                // Set Stats
+                const stats = profile.stats;
+                document.getElementById("modalStats").innerHTML = `
+                    <div class="stat-item"><div class="stat-value">${stats.quizzes_taken}</div><div>Taken</div></div>
+                    <div class="stat-item"><div class="stat-value">${stats.avg_score.toFixed(1)}</div><div>Avg</div></div>
+                    <div class="stat-item"><div class="stat-value">${stats.total_score}</div><div>Total</div></div>
+                `;
+
+                // Set History
+                const history = profile.history;
+                const modalBody = document.getElementById("modalHistoryBody");
+                modalBody.innerHTML = history.map(h => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 0.5rem; font-size:0.9rem;">${h.quiz_title}</td>
+                        <td>${h.score}</td>
+                        <td style="font-size:0.8rem; color:var(--text-muted);">${new Date(h.date).toLocaleDateString()}</td>
+                    </tr>
+                `).join("");
+
+                modal.style.display = "flex";
+            } catch (err) { alert(err.message); }
+        }
+
+        function closeModal() {
+            document.getElementById("studentModal").style.display = "none";
+        }
+    </script>
+</body>
+</html>

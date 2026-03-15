@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Session - Quizora</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/api.js"></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">Quizora<span>.</span></div>
+        <div class="nav-links">
+            <span id="timer" class="badge hard" style="font-size: 1rem;">00:00</span>
+            <a href="dashboard.html">Exit</a>
+        </div>
+    </nav>
+
+    <div class="glass-container" style="max-width: 750px; margin-top: 2rem; padding: 0; overflow: hidden; position: relative;">
+        <div class="gform-header"></div>
+        <div style="padding: 2rem;">
+            <h2 id="quizTitle" style="margin-bottom: 0.5rem;">Loading...</h2>
+            <p id="quizDesc" style="margin-bottom: 1.5rem; color: var(--text-muted);"></p>
+            
+            <form id="quizForm">
+                <div id="questionsContainer"></div>
+                <button type="submit" id="submitBtn" style="margin-top: 2.5rem; font-size: 1.1rem; padding: 1rem;">Submit Quiz</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizId = urlParams.get('id');
+        const isView = urlParams.get('view') === 'true';
+        let startTime = Date.now();
+        let timerInterval;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            if (!quizId) { window.location.href = "dashboard"; return; }
+            await loadQuiz();
+        });
+
+        async function loadQuiz() {
+            try {
+                const quiz = await apiFetch(`/quizzes/${quizId}`);
+                document.getElementById("quizTitle").innerText = quiz.title;
+                document.getElementById("quizDesc").innerText = quiz.description || "No description provided.";
+
+                if (isView) {
+                    document.getElementById("timer").style.display = "none";
+                    document.getElementById("submitBtn").style.display = "none";
+                } else {
+                    startTimer(quiz.time_limit);
+                }
+
+                const container = document.getElementById("questionsContainer");
+                container.innerHTML = quiz.questions.map((q, index) => `
+                    <div class="glass-card" style="margin-top: 1.5rem; padding: 1.5rem; background: rgba(30, 41, 59, 0.25);">
+                        <p style="color:white; font-size: 1.05rem; font-weight:600; margin-bottom: 1rem;">
+                            <span style="color: var(--primary); font-size: 0.9rem; margin-right: 0.25rem;">Q${index+1}.</span> ${q.question_text}
+                        </p>
+                        <div class="options-grid">
+                            <label class="option-btn">
+                                <input type="radio" name="q_${q.question_id}" value="1" ${isView ? 'disabled' : ''} required>
+                                <span>${q.option1}</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="q_${q.question_id}" value="2" ${isView ? 'disabled' : ''}>
+                                <span>${q.option2}</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="q_${q.question_id}" value="3" ${isView ? 'disabled' : ''}>
+                                <span>${q.option3}</span>
+                            </label>
+                            <label class="option-btn">
+                                <input type="radio" name="q_${q.question_id}" value="4" ${isView ? 'disabled' : ''}>
+                                <span>${q.option4}</span>
+                            </label>
+                        </div>
+                        ${isView ? `<p style="color:var(--accent); font-size:0.85rem; margin-top:0.85rem; font-weight:600;">Correct Option: ${q.correct_option}</p>` : ''}
+                    </div>
+                `).join("");
+
+            } catch (err) { alert(err.message); }
+        }
+
+        function startTimer(minutes) {
+            let totalSeconds = minutes * 60;
+            const timerEl = document.getElementById("timer");
+            
+            timerInterval = setInterval(() => {
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+                timerEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                
+                if (totalSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time up! Submitting answers automatically.");
+                    document.getElementById("quizForm").dispatchEvent(new Event('submit'));
+                }
+                totalSeconds--;
+            }, 1000);
+        }
+
+        document.getElementById("quizForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            if (isView) return;
+
+            clearInterval(timerInterval);
+            const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+            
+            const formData = new FormData(e.target);
+            const answers = [];
+
+            for (let [key, value] of formData.entries()) {
+                const question_id = parseInt(key.split('_')[1]);
+                answers.push({
+                    question_id: question_id,
+                    selected_option: parseInt(value)
+                });
+            }
+
+            try {
+                const result = await apiFetch(`/quizzes/${quizId}/submit`, {
+                    method: "POST",
+                    body: JSON.stringify({ answers, time_taken: timeTaken })
+                });
+                
+                alert(`Quiz Submitted! Score: ${result.score}`);
+                window.location.href = `results.html?attempt_id=${result.attempt_id}`;
+            } catch (err) { alert(err.message); }
+        });
+    </script>
+</body>
+</html>

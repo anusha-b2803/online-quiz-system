@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Quiz - Quizora</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/api.js"></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">Quizora<span>.</span></div>
+        <div class="nav-links">
+            <a href="dashboard.html">Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <div class="glass-container" style="max-width: 700px; margin-top: 3rem; margin-bottom: 3rem; height: auto; padding: 0; overflow: hidden; position: relative;">
+        <div class="gform-header"></div>
+        <div style="padding: 2.5rem;">
+            <h3 style="margin-bottom: 0.25rem;">Create New Quiz</h3>
+            <p style="margin-bottom: 2rem; color: var(--text-muted);">Fill in the details and add questions below.</p>
+
+        <form id="createQuizForm">
+            <label>Quiz Title</label>
+            <input type="text" id="qTitle" required placeholder="Python Basics">
+            
+            <label>Description</label>
+            <input type="text" id="qDesc" placeholder="Brief info about the quiz">
+            
+            <label>Time Limit (Minutes)</label>
+            <input type="number" id="qTime" required min="1" placeholder="10">
+
+            <label>Max Attempts (0 for Unlimited)</label>
+            <input type="number" id="qMaxAttempts" value="0" min="0" required style="margin-bottom: 1rem;">
+
+            <label>Assign To</label>
+            <select id="qAssignTo" onchange="toggleStudentList()" style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white; margin-bottom: 1rem;">
+                <option value="all">All Students</option>
+                <option value="specific">Specific Students</option>
+            </select>
+
+            <div id="studentListContainer" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px;">
+                <h5 style="margin-bottom: 0.5rem;">Select Students</h5>
+                <div id="studentCheckboxes" style="display: grid; grid-template-columns: 1fr; gap: 0.35rem; max-height: 150px; overflow-y: auto;">
+                    <!-- Checkboxes load here -->
+                </div>
+            </div>
+
+            <h4>Questions</h4>
+            <div id="questionsList" style="margin-bottom: 1rem;">
+                <!-- Question inputs injected here -->
+            </div>
+            <button type="button" class="secondary" onclick="addQuestionInput()" style="margin-bottom: 1rem;">+ Add Question</button>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button type="submit">Save Quiz</button>
+                <button type="button" class="secondary" onclick="window.location.href='dashboard'">Cancel</button>
+            </div>
+        </form>
+        </div>
+    </div>
+
+    <script>
+        let qCount = 0;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Add first question automatically
+            addQuestionInput();
+            
+            // Pre-load students
+            loadStudents();
+        });
+
+        async function loadStudents() {
+            try {
+                const students = await apiFetch("/students");
+                const cbDiv = document.getElementById("studentCheckboxes");
+                cbDiv.innerHTML = students.map(s => `
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                        <input type="checkbox" value="${s.user_id}" class="student-cb" style="width: auto; margin:0;">
+                        <span>${s.name} <span style="font-size: 0.75rem; color: var(--text-muted);">(${s.email})</span></span>
+                    </label>
+                `).join("");
+            } catch (err) { console.error("Failed to load students", err); }
+        }
+
+        function toggleStudentList() {
+            const val = document.getElementById("qAssignTo").value;
+            document.getElementById("studentListContainer").style.display = (val === "specific") ? "block" : "none";
+        }
+
+        function addQuestionInput() {
+            qCount++;
+            const div = document.createElement("div");
+            div.className = "glass-card";
+            div.style.marginBottom = "1rem";
+            div.innerHTML = `
+                <h5>Question ${qCount}</h5>
+                <input type="text" class="q_text" required placeholder="Enter question text">
+                <input type="text" class="q_opt1" required placeholder="Option 1">
+                <input type="text" class="q_opt2" required placeholder="Option 2">
+                <input type="text" class="q_opt3" required placeholder="Option 3">
+                <input type="text" class="q_opt4" required placeholder="Option 4">
+                <label style="font-size:0.85rem;">Correct Option (1-4)</label>
+                <input type="number" class="q_correct" min="1" max="4" required style="margin-bottom:0.5rem;">
+            `;
+            document.getElementById("questionsList").appendChild(div);
+        }
+
+        document.getElementById("createQuizForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const title = document.getElementById("qTitle").value;
+            const description = document.getElementById("qDesc").value;
+            const time_limit = parseInt(document.getElementById("qTime").value);
+            const max_attempts = parseInt(document.getElementById("qMaxAttempts").value);
+            const assign_to_all = document.getElementById("qAssignTo").value === "all";
+
+            // Collect assigned students
+            const assigned_students = [];
+            if (!assign_to_all) {
+                document.querySelectorAll(".student-cb:checked").forEach(cb => {
+                    assigned_students.push(parseInt(cb.value));
+                });
+                if (assigned_students.length === 0) {
+                    alert("Please select at least one student or assign to All.");
+                    return;
+                }
+            }
+
+            // Assemble questions
+            const questions = [];
+            const qCards = document.querySelectorAll("#questionsList .glass-card");
+            qCards.forEach(card => {
+                questions.push({
+                    question_text: card.querySelector(".q_text").value,
+                    option1: card.querySelector(".q_opt1").value,
+                    option2: card.querySelector(".q_opt2").value,
+                    option3: card.querySelector(".q_opt3").value,
+                    option4: card.querySelector(".q_opt4").value,
+                    correct_option: parseInt(card.querySelector(".q_correct").value),
+                    difficulty: "MEDIUM"
+                });
+            });
+
+            if (questions.length === 0) { alert("Please add at least one question."); return; }
+
+            try {
+                await apiFetch("/quizzes/create", {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        title, description, time_limit, max_attempts, 
+                        assign_to_all, assigned_students, questions 
+                    })
+                });
+                alert("Quiz created successfully!");
+                window.location.href = "dashboard";
+            } catch (err) { alert(err.message); }
+        });
+    </script>
+</body>
+</html>

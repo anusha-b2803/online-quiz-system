@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Quizora</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/api.js"></script>
+</head>
+<body>
+    <div class="glass-container" style="margin-top: 5rem;">
+        <div style="margin-bottom: 1.5rem; text-align: left;">
+            <a href="/" style="text-decoration: none; color: var(--primary); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.25rem;">&larr; Back to Home</a>
+        </div>
+        <h2 style="text-align: center;">Welcome Back</h2>
+        <p style="text-align: center; margin-bottom: 2rem;">Login to start your quiz session</p>
+        
+        <form id="loginForm">
+            <label>Email Address</label>
+            <input type="email" id="email" placeholder="email@example.com" required>
+            
+            <label>Password</label>
+            <input type="password" id="password" placeholder="••••••••" required>
+            
+            <button type="submit" id="submitBtn">Login</button>
+        </form>
+        
+        <p style="text-align: center; margin-top: 1.5rem;">
+            Don't have an account? <a href="register.html" style="color: var(--primary); text-decoration: none;">Register</a>
+        </p>
+        <p id="errorMsg" style="color: #ef4444; font-size: 0.85rem; text-align: center; margin-top: 1rem;"></p>
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const btn = document.getElementById("submitBtn");
+            const errorMsg = document.getElementById("errorMsg");
+
+            btn.innerText = "Logging in...";
+            errorMsg.innerText = "";
+
+            try {
+                const response = await fetch("http://localhost:8000/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Login failed");
+                }
+
+                const data = await response.json();
+                setToken(data.access_token, data.role, data.user_id);
+                
+                // Redirect based on role
+                window.location.href = "dashboard.html";
+            } catch (err) {
+                errorMsg.innerText = err.message;
+                btn.innerText = "Login";
+            }
+        });
+    </script>
+</body>
+</html>
